@@ -2,10 +2,69 @@
 //
 
 #include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+
+using namespace std;
+
+void loadData(vector<string> &dataFile, string file);
+
+void printData(vector<string>& dataFile);
 
 int main()
 {
-    std::cout << "Hello World!\n";
+    string file1, file2, line;
+    
+    ofstream outFile;
+    vector<string> dataFile1;
+    vector<string> dataFile2;
+
+    cout << "Enter first file name.\n";
+    getline(cin, file1);
+    cout << "Enter second file name.\n";
+    getline(cin, file2);
+
+    loadData(dataFile1, file1);
+    loadData(dataFile2, file2);
+
+    printData(dataFile1);
+    printData(dataFile2);
+
+    //for (int i = 0; i < dataFile1.size(); i++)
+    //{
+    //    cout << dataFile1[i] << "\n";
+    //}
+
+    //for (int i = 0; i < dataFile2.size(); i++)
+    //{
+    //    cout << dataFile2[i] << "\n";
+    //}
+
+
+}
+
+void loadData(vector<string> &dataFile, string file)
+{
+    ifstream inData;
+    string line;
+
+    inData.open(file);
+    while (getline(inData, line))
+    {
+        dataFile.push_back(line);
+    }
+    inData.close();
+
+}
+
+void printData(vector<string>& dataFile)
+{
+    for (int i = 0; i < dataFile.size(); i++)
+    {
+        cout << dataFile[i] << "\n";
+    }
+    cout << "#################################\n";
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

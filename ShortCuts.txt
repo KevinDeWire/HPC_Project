@@ -1,0 +1,15 @@
+E:\03_Visual Studio Development\HPC_Project\Helix-1.txt
+
+E:\03_Visual Studio Development\HPC_Project\Helix-2.txt
+
+E:\03_Visual Studio Development\HPC_Project\1A12.txt
+
+E:\03_Visual Studio Development\HPC_Project\1B3A.txt
+
+E:\03_Visual Studio Development\HPC_Project\2QTR.txt
+
+E:\03_Visual Studio Development\HPC_Project\output1.pdb
+
+E:\03_Visual Studio Development\HPC_Project\output2.pdb
+
+E:\03_Visual Studio Development\HPC_Project\output3.pdb

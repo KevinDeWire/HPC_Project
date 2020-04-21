@@ -1,4 +1,4 @@
-HELIX    4   4 ASP A   65  ASN A   78  1                                  14   
+HELIX    4   4 ASP A   65  ASN A   78  1                                  14
 ATOM    562  N   ASP A  65      14.228  42.689   9.618  1.00 14.54           N
 ATOM    563  CA  ASP A  65      14.117  42.055   8.309  1.00 17.08           C
 ATOM    564  C   ASP A  65      15.422  42.188   7.522  1.00 16.70           C

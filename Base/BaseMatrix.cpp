@@ -11,8 +11,6 @@
 
 using namespace std;
 
-#define N 4
-
 void LoadData(vector<string>& dataFile, string file);
 void PrintData(vector<string>& dataFile);
 void SaveData(vector<string>& dataFile, string file);
@@ -23,7 +21,7 @@ void HelixStartPoint(float** helixPoints, float*& helixStartPoint);
 void HelixEndPoint(float** helixPoints, float*& helixEndPoint, int length);
 void InitalizeOrigen(float*& origen);
 void MoveDistance(float*& moveDistance, float* point1, float* point2);
-void TranslationMatrix(float matrix[][N], float* move);
+void TranslationMatrix(float**& matrix, float* move);
 void XRotateMatrix(float**& RxMatrix, float thetaX);
 void YRotateMatrix(float**& RyMatrix, float thetaY);
 void ZRotateMatrix(float**& RzMatrix, float thetaZ);
@@ -75,8 +73,8 @@ int main()
 
     float thetaX, thetaY, thetaZ;
 
-    float ToMatrix[N][N]; // Translation to Origen
-    float RzMatrix[N][N]; // Z rotation
+    float** ToMatrix; // Translation to Origen
+    float** RzMatrix; // Z rotation
     float** RyMatrix; // Y rotation
     float** RxMatrix; // X rotation
     float** TfMatrix; // Translation to final position
@@ -132,7 +130,7 @@ int main()
 
     auto start2 = chrono::high_resolution_clock::now();
 
-    //   Translation(dataFile2, outputFile, moveToOrigen, thetaX, thetaY, thetaZ, moveToFinal);
+ //   Translation(dataFile2, outputFile, moveToOrigen, thetaX, thetaY, thetaZ, moveToFinal);
 
     auto end2 = chrono::high_resolution_clock::now();
 
@@ -283,7 +281,7 @@ void MoveDistance(float*& moveDistance, float* point1, float* point2)
     }
 }
 
-void TranslationMatrix(float matrix[N][N], float* move)
+void TranslationMatrix(float**& matrix, float* move)
 {
     matrix = { {1,0,0,move[0]},{0,1,0,move[1]},{0,0,1,move[2]},{0,0,0,1} };
 }

@@ -11,9 +11,6 @@
 
 using namespace std;
 
-#define N 4
-#define M 1
-
 void LoadData(vector<string>& dataFile, string file);
 void PrintData(vector<string>& dataFile);
 void SaveData(vector<string>& dataFile, string file);
@@ -25,17 +22,9 @@ void HelixStartPoint(vector< vector<float> >& helixPoints, vector<float>& helixS
 void HelixEndPoint(vector< vector<float> >& helixPoints, vector<float>& helixEndPoint, int length);
 void MoveDistance(vector<float>& moveDistance, vector<float>& point1, vector<float>& point2);
 
-// Matrix
-void TranslationMatrix(vector<float> move);
-void XRotateMatrix(float thetaX);
-void YRotateMatrix(float RyMatrix[][N], float thetaY);
-void ZRotateMatrix(float RzMatrix[][N], float thetaZ);
-void TransformationMatrix(float TfMatrix[][N], float RxMatrix[][N], float RyMatrix[][N], float RzMatrix[][N], float ToMatrix[][N], float TransMatrix[][N]);
-void Multiply4x4(float mat1[][N], float mat2[][N], float res[][N]);
-
 // Linear
-void Translation(vector<string>& inputFile, vector<string>& outputFile, float* moveToOrigen, float thetaX, float thetaY, float thetaZ, float* moveToFinal);
-void Move(float* moveDist, float& x, float& y, float& z);
+void Translation(vector<string>& inputFile, vector<string>& outputFile, vector<float>& moveToOrigen, float thetaX, float thetaY, float thetaZ, vector<float>& moveToFinal);
+void Move(vector<float>& moveDist, float& x, float& y, float& z);
 void Rotate(float theta, float& coord1, float& coord2);
 
 // Useful
@@ -51,8 +40,8 @@ string AltLocInd(string record);
 float XCoord(string record);
 float YCoord(string record);
 float ZCoord(string record);
-float CoordAvg(float** helixPoints, int first, int pos);
-float Theta(float* helixStartPoint, float* helixEndPoint, int opp, int adj);
+float CoordAvg(vector< vector<float> >& helixPoints, int first, int pos);
+float Theta(vector<float>& helixStartPoint, vector<float>& helixEndPoint, int opp, int adj);
 
 
 
@@ -81,12 +70,7 @@ int main()
 
     float thetaX, thetaY, thetaZ;
 
-    vector< vector<float> > ToMatrix; // Translation to Origen
-    vector< vector<float> > RzMatrix; // Z rotation
-    vector< vector<float> > RyMatrix; // Y rotation
-    vector< vector<float> > RxMatrix; // X rotation
-    vector< vector<float> > TfMatrix; // Translation to final position
-    vector< vector<float> > TransMatrix; // Transformation matrix
+    // Program starts here
 
     cout << "Enter first file name.\n";
     getline(cin, inFile1);
@@ -118,27 +102,11 @@ int main()
     MoveDistance(moveToOrigen, origenPoint, helixStartPoint2);
     MoveDistance(moveToFinal, helixStartPoint1, origenPoint);
 
-    TfMatrix=TranslationMatrix(moveToFinal);
-    ToMatrix=TranslationMatrix(moveToOrigen);
-    RxMatrix=XRotateMatrix(thetaX);
-    RyMatrix=YRotateMatrix(thetaY);
-    RzMatrix=ZRotateMatrix(thetaZ);
-    TransMatrix=TransformationMatrix(TfMatrix, RxMatrix, RyMatrix, RzMatrix, ToMatrix);
-
-    for (int i = 0; i < N; i++)
-    {
-        for (int j = 0; j < N; j++)
-        {
-            cout << TransMatrix[i][j] << "  ";
-        }
-        cout << endl;
-    }
-
     auto end1 = chrono::high_resolution_clock::now();
 
     auto start2 = chrono::high_resolution_clock::now();
 
-    //   Translation(dataFile2, outputFile, moveToOrigen, thetaX, thetaY, thetaZ, moveToFinal);
+    Translation(dataFile2, outputFile, moveToOrigen, thetaX, thetaY, thetaZ, moveToFinal);
 
     auto end2 = chrono::high_resolution_clock::now();
 
@@ -173,7 +141,7 @@ int main()
        //PrintData(outputFile);
 
 
-//    SaveData(outputFile, outFileName);
+    SaveData(outputFile, outFileName);
 
 }
 
@@ -195,7 +163,7 @@ void LoadData(vector<string>& dataFile, string file)
 void HelixSetup(vector< vector<float> >& helixPoints, vector<string>& dataFile, int& length)
 {
     string helixChainID, recordType;
-    int initSeqNum, endSeqNum, helixLength;
+    int initSeqNum, endSeqNum;
     bool helixFound = false;
 
     for (int i = 0; i < dataFile.size(); i++)
@@ -207,10 +175,10 @@ void HelixSetup(vector< vector<float> >& helixPoints, vector<string>& dataFile, 
             endSeqNum = HelixEndSeqNum(dataFile[i]);
             length = HelixLength(dataFile[i]);
             helixPoints.resize(length);
-            for (int row = 0; row < length; row++)
-            {
-                helixPoints.resize(3);
-            }
+            //for (int row = 0; row < length; row++)
+            //{
+            //    helixPoints[row].resize(3);
+            //}
             HelixCoordExtract(helixPoints, dataFile, helixChainID, initSeqNum, endSeqNum);
             helixFound = true;
         }
@@ -242,9 +210,9 @@ void HelixCoordExtract(vector< vector<float> >& helixPoints, vector<string>& dat
                         altLocInd = AltLocInd(dataFile[i]);
                         if (altLocInd == " " || altLocInd == "A")
                         {
-                            helixPoints[j][0] = XCoord(dataFile[i]);
-                            helixPoints[j][1] = YCoord(dataFile[i]);
-                            helixPoints[j][2] = ZCoord(dataFile[i]);
+                            helixPoints[j].push_back(XCoord(dataFile[i]));
+                            helixPoints[j].push_back(YCoord(dataFile[i]));
+                            helixPoints[j].push_back(ZCoord(dataFile[i]));
                             j++;
                         }
                     }
@@ -282,95 +250,7 @@ void MoveDistance(vector<float>& moveDistance, vector<float>& point1, vector<flo
     }
 }
 
-
-// MAtrix Functions
-float** TranslationMatrix(float* move)
-{
-    float** matrix = new float*[N];
-    for (int i = 0; i < N; i++)
-    {
-        matrix[i] = new float[N];
-    }
-    matrix[0][0] = 1; matrix[0][1] = 0; matrix[0][2] = 0; matrix[0][3] = move[0];
-    matrix[1][0] = 0; matrix[1][1] = 1; matrix[1][2] = 0; matrix[1][3] = move[1];
-    matrix[2][0] = 0; matrix[2][1] = 0; matrix[2][2] = 1; matrix[2][3] = move[2];
-    matrix[3][0] = 0; matrix[3][0] = 0; matrix[3][0] = 0; matrix[3][0] = 1;
-    return matrix;
-}
-
-float** XRotateMatrix(float thetaX)
-{
-    float** matrix = new float* [N];
-    for (int i = 0; i < N; i++)
-    {
-        matrix[i] = new float[N];
-    }
-    matrix[0][0] = cos(thetaX); matrix[0][1] = -sin(thetaX); matrix[0][2] = 0; matrix[0][3] = 0;
-    matrix[1][0] = sin(thetaX); matrix[1][1] = cos(thetaX); matrix[1][2] = 0; matrix[1][3] = 0;
-    matrix[2][0] = 0; matrix[2][1] = 0; matrix[2][2] = 1; matrix[2][3] = 0;
-    matrix[3][0] = 0; matrix[3][0] = 0; matrix[3][0] = 0; matrix[3][0] = 1;
-    return matrix;
-}
-
-float** YRotateMatrix(float thetaY)
-{
-    float** matrix = new float* [N];
-    for (int i = 0; i < N; i++)
-    {
-        matrix[i] = new float[N];
-    }
-    RyMatrix = { {cos(thetaY),0,sin(thetaY),0},{0,1,0,0},{-sin(thetaY),0,cos(thetaY),0},{0,0,0,1} };
-}
-
-float** ZRotateMatrix(float thetaZ)
-{
-    float** matrix = new float* [N];
-    for (int i = 0; i < N; i++)
-    {
-        matrix[i] = new float[N];
-    }
-    RzMatrix = { {1,0,0,0},{0,cos(thetaZ),-sin(thetaZ),0},{0,sin(thetaZ),cos(thetaZ),0}, {0,0,0,1} };
-}
-
-float** TransformationMatrix(float TfMatrix[][N], float RxMatrix[][N], float RyMatrix[][N], float RzMatrix[][N], float ToMatrix[][N], float TransMatrix[][N])
-{
-    float** tempMatrix1 = new float* [N];
-    for (int i = 0; i < N; i++)
-    {
-        matrix[i] = new float[N];
-    }
-    float** tempMatrix2 = new float* [N];
-    for (int i = 0; i < N; i++)
-    {
-        matrix[i] = new float[N];
-    }
-    tempMatrix1 = MultiplyNxN(TfMatrix, RxMatrix);
-    tempMatrix2 = MultiplyNxN(tempMatrix1, RyMatrix);
-    tempMatrix1 = MultiplyNxN(tempMatrix2, RzMatrix);
-    tempMatrix2 = MultiplyNxN(tempMatrix1, ToMatrix);
-    return tempMatrix2;
-}
-
-float** MultiplyNxN(float** mat1, float** mat2)
-{
-    float** matrix = new float* [N];
-    for (int i = 0; i < N; i++)
-    {
-        matrix[i] = new float[N];
-    }
-    int i, j, k;
-    for (i = 0; i < N; i++)
-    {
-        for (j = 0; j < N; j++)
-        {
-            matrix[i][j] = 0;
-            for (k = 0; k < N; k++)
-                matrix[i][j] += mat1[i][k] * mat2[k][j];
-        }
-    }
-}
-
-void Translation(vector<string>& inputFile, vector<string>& outputFile, vector<string>& moveToOrigen, float thetaX, float thetaY, float thetaZ, float* moveToFinal)
+void Translation(vector<string>& inputFile, vector<string>& outputFile, vector<float>& moveToOrigen, float thetaX, float thetaY, float thetaZ, vector<float>& moveToFinal)
 {
     string record;
     float x, y, z;
@@ -413,7 +293,7 @@ void Translation(vector<string>& inputFile, vector<string>& outputFile, vector<s
     }
 }
 
-void Move(float* moveDist, float& x, float& y, float& z)
+void Move(vector<float>& moveDist, float& x, float& y, float& z)
 {
     x += moveDist[0];
     y += moveDist[1];

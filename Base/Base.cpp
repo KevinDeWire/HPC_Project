@@ -11,20 +11,23 @@
 
 using namespace std;
 
-void LoadData(vector<string> &dataFile, string file);
-void PrintData(vector<string> &dataFile);
-void SaveData(vector<string> &dataFile, string file);
+void LoadData(vector<string>& dataFile, string file);
+void PrintData(vector<string>& dataFile);
+void SaveData(vector<string>& dataFile, string file);
 
-void HelixSetup(float**& helixPoints, vector<string>& dataFile, int& length);
-void HelixCoordExtract(float**& helixPoints, vector<string>& dataFile, string helixChainID, int initSeqNum, int endSeqNum);
-void HelixStartPoint(float** helixPoints, float*& helixStartPoint);
-void HelixEndPoint(float** helixPoints, float*& helixEndPoint, int length);
-void InitalizeOrigen(float*& origen);
-void MoveDistance(float*& moveDistance, float* point1, float* point2);
-void Translation(vector<string>& inputFile, vector<string>& outputFile, float* moveToOrigen, float thetaX, float thetaY, float thetaZ, float* moveToFinal);
-void Move(float* moveDist, float& x, float& y, float& z);
+// Common
+void HelixSetup(vector< vector<float> >& helixPoints, vector<string>& dataFile, int& length);
+void HelixCoordExtract(vector< vector<float> >& helixPoints, vector<string>& dataFile, string helixChainID, int initSeqNum, int endSeqNum);
+void HelixStartPoint(vector< vector<float> >& helixPoints, vector<float>& helixStartPoint);
+void HelixEndPoint(vector< vector<float> >& helixPoints, vector<float>& helixEndPoint, int length);
+void MoveDistance(vector<float>& moveDistance, vector<float>& point1, vector<float>& point2);
+
+// Linear
+void Translation(vector<string>& inputFile, vector<string>& outputFile, vector<float>& moveToOrigen, float thetaX, float thetaY, float thetaZ, vector<float>& moveToFinal);
+void Move(vector<float>& moveDist, float& x, float& y, float& z);
 void Rotate(float theta, float& coord1, float& coord2);
 
+// Useful
 string RecordType(string record);
 int HelixLength(string record);
 string HelixChainID(string record);
@@ -37,8 +40,8 @@ string AltLocInd(string record);
 float XCoord(string record);
 float YCoord(string record);
 float ZCoord(string record);
-float CoordAvg(float** helixPoints, int first, int pos);
-float Theta(float* helixStartPoint, float* helixEndPoint, int opp, int adj);
+float CoordAvg(vector< vector<float> >& helixPoints, int first, int pos);
+float Theta(vector<float>& helixStartPoint, vector<float>& helixEndPoint, int opp, int adj);
 
 
 
@@ -51,22 +54,24 @@ int main()
     ofstream outFile;
     vector<string> outputFile;
 
-    float** helixPoints1;
-    float** helixPoints2;
+    vector< vector<float> > helixPoints1;
+    vector< vector<float> > helixPoints2;
 
     int helixPoints1Length = 0;
     int helixPoints2Length = 0;
 
-    float* helixStartPoint1 = new float[3];
-    float* helixEndPoint1 = new float[3];
-    float* helixStartPoint2 = new float[3];
-    float* helixEndPoint2 = new float[3];
-    float* origenPoint = new float[3];
-    float* moveToOrigen = new float[3];
-    float* moveToFinal = new float[3];
+    vector<float> helixStartPoint1;
+    vector<float> helixEndPoint1;
+    vector<float> helixStartPoint2;
+    vector<float> helixEndPoint2;
+    vector<float> origenPoint;
+    vector<float> moveToOrigen;
+    vector<float> moveToFinal;
 
     float thetaX, thetaY, thetaZ;
-    
+
+    // Program starts here
+
     cout << "Enter first file name.\n";
     getline(cin, inFile1);
     cout << "Enter second file name.\n";
@@ -84,7 +89,7 @@ int main()
 
     HelixStartPoint(helixPoints1, helixStartPoint1);
     HelixStartPoint(helixPoints2, helixStartPoint2);
-    
+
     HelixEndPoint(helixPoints1, helixEndPoint1, helixPoints1Length);
     HelixEndPoint(helixPoints2, helixEndPoint2, helixPoints2Length);
 
@@ -92,7 +97,7 @@ int main()
     thetaY = Theta(helixEndPoint1, helixStartPoint1, 2, 0) - Theta(helixEndPoint2, helixStartPoint2, 2, 0);
     thetaX = Theta(helixEndPoint1, helixStartPoint1, 2, 1) - Theta(helixEndPoint2, helixStartPoint2, 2, 1);
 
-    InitalizeOrigen(origenPoint);
+    origenPoint.assign(3, 0);
 
     MoveDistance(moveToOrigen, origenPoint, helixStartPoint2);
     MoveDistance(moveToFinal, helixStartPoint1, origenPoint);
@@ -117,29 +122,30 @@ int main()
     cout << "Translation Time: " << fixed << time_taken2 << setprecision(9) << endl;
     cout << "Total Time: " << fixed << time_taken3 << setprecision(9) << endl;
 
- //   cout << thetaX << " | " << thetaY << " | " << thetaZ;
+    //   cout << thetaX << " | " << thetaY << " | " << thetaZ;
 
-    //for (int i = 0; i < 3; i++)
-    //{
-    //    cout << moveToOrigen[i] << " | ";
-    //}
-    //cout << endl;
+       //for (int i = 0; i < 3; i++)
+       //{
+       //    cout << moveToOrigen[i] << " | ";
+       //}
+       //cout << endl;
 
-    //for (int i = 0; i < 3; i++)
-    //{
-    //    cout << moveToFinal[i] << " | ";
-    //}
-    //cout << endl;
+       //for (int i = 0; i < 3; i++)
+       //{
+       //    cout << moveToFinal[i] << " | ";
+       //}
+       //cout << endl;
 
-    //PrintData(dataFile1);
-    //PrintData(dataFile2);
-    //PrintData(outputFile);
+       //PrintData(dataFile1);
+       //PrintData(dataFile2);
+       //PrintData(outputFile);
 
 
     SaveData(outputFile, outFileName);
 
 }
 
+// Setup Functions
 void LoadData(vector<string>& dataFile, string file)
 {
     ifstream inData;
@@ -154,10 +160,10 @@ void LoadData(vector<string>& dataFile, string file)
 
 }
 
-void HelixSetup(float** &helixPoints, vector<string>& dataFile, int &length)
+void HelixSetup(vector< vector<float> >& helixPoints, vector<string>& dataFile, int& length)
 {
     string helixChainID, recordType;
-    int initSeqNum, endSeqNum, helixLength;
+    int initSeqNum, endSeqNum;
     bool helixFound = false;
 
     for (int i = 0; i < dataFile.size(); i++)
@@ -168,11 +174,11 @@ void HelixSetup(float** &helixPoints, vector<string>& dataFile, int &length)
             initSeqNum = HelixInitSeqNum(dataFile[i]);
             endSeqNum = HelixEndSeqNum(dataFile[i]);
             length = HelixLength(dataFile[i]);
-            helixPoints = new float* [length];
-            for (int row = 0; row < length; row++)
-            {
-                helixPoints[row] = new float[3];
-            }
+            helixPoints.resize(length);
+            //for (int row = 0; row < length; row++)
+            //{
+            //    helixPoints[row].resize(3);
+            //}
             HelixCoordExtract(helixPoints, dataFile, helixChainID, initSeqNum, endSeqNum);
             helixFound = true;
         }
@@ -184,7 +190,7 @@ void HelixSetup(float** &helixPoints, vector<string>& dataFile, int &length)
 
 }
 
-void HelixCoordExtract(float**& helixPoints, vector<string>& dataFile, string helixChainID, int initSeqNum, int endSeqNum)
+void HelixCoordExtract(vector< vector<float> >& helixPoints, vector<string>& dataFile, string helixChainID, int initSeqNum, int endSeqNum)
 {
     int j = 0;
     int resSeq;
@@ -204,9 +210,9 @@ void HelixCoordExtract(float**& helixPoints, vector<string>& dataFile, string he
                         altLocInd = AltLocInd(dataFile[i]);
                         if (altLocInd == " " || altLocInd == "A")
                         {
-                            helixPoints[j][0] = XCoord(dataFile[i]);
-                            helixPoints[j][1] = YCoord(dataFile[i]);
-                            helixPoints[j][2] = ZCoord(dataFile[i]);
+                            helixPoints[j].push_back(XCoord(dataFile[i]));
+                            helixPoints[j].push_back(YCoord(dataFile[i]));
+                            helixPoints[j].push_back(ZCoord(dataFile[i]));
                             j++;
                         }
                     }
@@ -220,45 +226,37 @@ void HelixCoordExtract(float**& helixPoints, vector<string>& dataFile, string he
     }
 }
 
-void HelixStartPoint(float** helixPoints, float*& helixStartPoint)
+void HelixStartPoint(vector< vector<float> >& helixPoints, vector<float>& helixStartPoint)
 {
     for (int i = 0; i < 3; i++)
     {
-        helixStartPoint[i] = CoordAvg(helixPoints, 0, i);
+        helixStartPoint.push_back(CoordAvg(helixPoints, 0, i));
     }
 }
 
-void HelixEndPoint(float** helixPoints, float*& helixEndPoint, int length)
+void HelixEndPoint(vector< vector<float> >& helixPoints, vector<float>& helixEndPoint, int length)
 {
     for (int i = 0; i < 3; i++)
     {
-        helixEndPoint[i] = CoordAvg(helixPoints, length - 4, i);
+        helixEndPoint.push_back(CoordAvg(helixPoints, length - 4, i));
     }
 }
 
-void InitalizeOrigen(float*& origen)
+void MoveDistance(vector<float>& moveDistance, vector<float>& point1, vector<float>& point2)
 {
     for (int i = 0; i < 3; i++)
     {
-        origen[i] = 0;
+        moveDistance.push_back(point1[i] - point2[i]);
     }
 }
 
-void MoveDistance(float*& moveDistance, float* point1, float* point2)
-{
-    for (int i = 0; i < 3; i++)
-    {
-        moveDistance[i] = point1[i] - point2[i];
-    }
-}
-
-void Translation(vector<string>& inputFile, vector<string>& outputFile, float* moveToOrigen, float thetaX, float thetaY, float thetaZ, float* moveToFinal)
+void Translation(vector<string>& inputFile, vector<string>& outputFile, vector<float>& moveToOrigen, float thetaX, float thetaY, float thetaZ, vector<float>& moveToFinal)
 {
     string record;
     float x, y, z;
     ostringstream xstr, ystr, zstr;
 
-    
+
 
     for (int i = 0; i < inputFile.size(); i++)
     {
@@ -266,7 +264,7 @@ void Translation(vector<string>& inputFile, vector<string>& outputFile, float* m
         ystr.width(8);
         zstr.width(8);
         record = inputFile[i];
-        
+
         if (RecordType(record) == "ATOM  ")
         {
             x = XCoord(record);
@@ -286,7 +284,7 @@ void Translation(vector<string>& inputFile, vector<string>& outputFile, float* m
             record.replace(30, 8, xstr.str());
             record.replace(38, 8, ystr.str());
             record.replace(46, 8, zstr.str());
-            
+
             xstr.str("");
             ystr.str("");
             zstr.str("");
@@ -295,7 +293,7 @@ void Translation(vector<string>& inputFile, vector<string>& outputFile, float* m
     }
 }
 
-void Move(float* moveDist, float& x, float& y, float& z)
+void Move(vector<float>& moveDist, float& x, float& y, float& z)
 {
     x += moveDist[0];
     y += moveDist[1];
@@ -371,7 +369,7 @@ float ZCoord(string record)
     return stof(record.substr(46, 8));
 }
 
-float CoordAvg(float** helixPoints, int first, int pos)
+float CoordAvg(vector< vector<float> >& helixPoints, int first, int pos)
 {
     float coordAvg = 0;
     for (int i = first; i < first + 4; i++)
@@ -381,7 +379,7 @@ float CoordAvg(float** helixPoints, int first, int pos)
     return coordAvg / 4;
 }
 
-float Theta(float* helixStartPoint, float* helixEndPoint, int opp, int adj)
+float Theta(vector<float>& helixStartPoint, vector<float>& helixEndPoint, int opp, int adj)
 {
     return atan((helixEndPoint[opp] - helixStartPoint[opp]) / (helixEndPoint[adj] - helixStartPoint[adj]));
 }
@@ -399,9 +397,9 @@ void SaveData(vector<string>& dataFile, string file)
 
     ofstream outData;
     outData.open(file);
-    for(int i=0; i < dataFile.size(); i++)
+    for (int i = 0; i < dataFile.size(); i++)
     {
-       outData << dataFile[i] << endl;
+        outData << dataFile[i] << endl;
     }
     outData.close();
 }

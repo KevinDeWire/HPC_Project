@@ -12,27 +12,33 @@
 using namespace std;
 
 #define N 4
+#define M 1
 
 void LoadData(vector<string>& dataFile, string file);
 void PrintData(vector<string>& dataFile);
 void SaveData(vector<string>& dataFile, string file);
 
-void HelixSetup(float**& helixPoints, vector<string>& dataFile, int& length);
-void HelixCoordExtract(float**& helixPoints, vector<string>& dataFile, string helixChainID, int initSeqNum, int endSeqNum);
-void HelixStartPoint(float** helixPoints, float*& helixStartPoint);
-void HelixEndPoint(float** helixPoints, float*& helixEndPoint, int length);
-void InitalizeOrigen(float*& origen);
-void MoveDistance(float*& moveDistance, float* point1, float* point2);
-void TranslationMatrix(float matrix[][N], float* move);
-void XRotateMatrix(float**& RxMatrix, float thetaX);
-void YRotateMatrix(float**& RyMatrix, float thetaY);
-void ZRotateMatrix(float**& RzMatrix, float thetaZ);
-void TransformationMatrix(float** TfMatrix, float** RxMatrix, float** RyMatrix, float** RzMatrix, float** ToMatrix, float**& TransMatrix);
+// Common
+void HelixSetup(vector< vector<float> >& helixPoints, vector<string>& dataFile, int& length);
+void HelixCoordExtract(vector< vector<float> >& helixPoints, vector<string>& dataFile, string helixChainID, int initSeqNum, int endSeqNum);
+void HelixStartPoint(vector< vector<float> >& helixPoints, vector<float>& helixStartPoint);
+void HelixEndPoint(vector< vector<float> >& helixPoints, vector<float>& helixEndPoint, int length);
+void MoveDistance(vector<float>& moveDistance, vector<float>& point1, vector<float>& point2);
 
+// Matrix
+void TranslationMatrix(vector<float> move);
+void XRotateMatrix(float thetaX);
+void YRotateMatrix(float RyMatrix[][N], float thetaY);
+void ZRotateMatrix(float RzMatrix[][N], float thetaZ);
+void TransformationMatrix(float TfMatrix[][N], float RxMatrix[][N], float RyMatrix[][N], float RzMatrix[][N], float ToMatrix[][N], float TransMatrix[][N]);
+void Multiply4x4(float mat1[][N], float mat2[][N], float res[][N]);
+
+// Linear
 void Translation(vector<string>& inputFile, vector<string>& outputFile, float* moveToOrigen, float thetaX, float thetaY, float thetaZ, float* moveToFinal);
 void Move(float* moveDist, float& x, float& y, float& z);
 void Rotate(float theta, float& coord1, float& coord2);
 
+// Useful
 string RecordType(string record);
 int HelixLength(string record);
 string HelixChainID(string record);
@@ -59,28 +65,28 @@ int main()
     ofstream outFile;
     vector<string> outputFile;
 
-    float** helixPoints1;
-    float** helixPoints2;
+    vector< vector<float> > helixPoints1;
+    vector< vector<float> > helixPoints2;
 
     int helixPoints1Length = 0;
     int helixPoints2Length = 0;
 
-    float* helixStartPoint1 = new float[3];
-    float* helixEndPoint1 = new float[3];
-    float* helixStartPoint2 = new float[3];
-    float* helixEndPoint2 = new float[3];
-    float* origenPoint = new float[3];
-    float* moveToOrigen = new float[3];
-    float* moveToFinal = new float[3];
+    vector<float> helixStartPoint1;
+    vector<float> helixEndPoint1;
+    vector<float> helixStartPoint2;
+    vector<float> helixEndPoint2;
+    vector<float> origenPoint;
+    vector<float> moveToOrigen;
+    vector<float> moveToFinal;
 
     float thetaX, thetaY, thetaZ;
 
-    float ToMatrix[N][N]; // Translation to Origen
-    float RzMatrix[N][N]; // Z rotation
-    float** RyMatrix; // Y rotation
-    float** RxMatrix; // X rotation
-    float** TfMatrix; // Translation to final position
-    float** TransMatrix; // Transformation matrix
+    vector< vector<float> > ToMatrix; // Translation to Origen
+    vector< vector<float> > RzMatrix; // Z rotation
+    vector< vector<float> > RyMatrix; // Y rotation
+    vector< vector<float> > RxMatrix; // X rotation
+    vector< vector<float> > TfMatrix; // Translation to final position
+    vector< vector<float> > TransMatrix; // Transformation matrix
 
     cout << "Enter first file name.\n";
     getline(cin, inFile1);
@@ -107,23 +113,23 @@ int main()
     thetaY = Theta(helixEndPoint1, helixStartPoint1, 2, 0) - Theta(helixEndPoint2, helixStartPoint2, 2, 0);
     thetaX = Theta(helixEndPoint1, helixStartPoint1, 2, 1) - Theta(helixEndPoint2, helixStartPoint2, 2, 1);
 
-    InitalizeOrigen(origenPoint);
+    origenPoint.assign(3, 0);
 
     MoveDistance(moveToOrigen, origenPoint, helixStartPoint2);
     MoveDistance(moveToFinal, helixStartPoint1, origenPoint);
 
-    TranslationMatrix(TfMatrix, moveToFinal);
-    TranslationMatrix(ToMatrix, moveToOrigen);
-    XRotateMatrix(RxMatrix, thetaX);
-    YRotateMatrix(RyMatrix, thetaY);
-    ZRotateMatrix(RzMatrix, thetaZ);
-    TransformationMatrix(TfMatrix, RxMatrix, RyMatrix, RzMatrix, ToMatrix, TransMatrix);
+    TfMatrix=TranslationMatrix(moveToFinal);
+    ToMatrix=TranslationMatrix(moveToOrigen);
+    RxMatrix=XRotateMatrix(thetaX);
+    RyMatrix=YRotateMatrix(thetaY);
+    RzMatrix=ZRotateMatrix(thetaZ);
+    TransMatrix=TransformationMatrix(TfMatrix, RxMatrix, RyMatrix, RzMatrix, ToMatrix);
 
-    for (int i = 0; i < TransMatrix.size(); i++)
+    for (int i = 0; i < N; i++)
     {
-        for (int j = 0; j < TransMatrix[i].size(); j++)
+        for (int j = 0; j < N; j++)
         {
-            cout << TransMatrix[i][j] << " | ";
+            cout << TransMatrix[i][j] << "  ";
         }
         cout << endl;
     }
@@ -171,6 +177,7 @@ int main()
 
 }
 
+// Setup Functions
 void LoadData(vector<string>& dataFile, string file)
 {
     ifstream inData;
@@ -185,7 +192,7 @@ void LoadData(vector<string>& dataFile, string file)
 
 }
 
-void HelixSetup(float**& helixPoints, vector<string>& dataFile, int& length)
+void HelixSetup(vector< vector<float> >& helixPoints, vector<string>& dataFile, int& length)
 {
     string helixChainID, recordType;
     int initSeqNum, endSeqNum, helixLength;
@@ -199,10 +206,10 @@ void HelixSetup(float**& helixPoints, vector<string>& dataFile, int& length)
             initSeqNum = HelixInitSeqNum(dataFile[i]);
             endSeqNum = HelixEndSeqNum(dataFile[i]);
             length = HelixLength(dataFile[i]);
-            helixPoints = new float* [length];
+            helixPoints.resize(length);
             for (int row = 0; row < length; row++)
             {
-                helixPoints[row] = new float[3];
+                helixPoints.resize(3);
             }
             HelixCoordExtract(helixPoints, dataFile, helixChainID, initSeqNum, endSeqNum);
             helixFound = true;
@@ -215,7 +222,7 @@ void HelixSetup(float**& helixPoints, vector<string>& dataFile, int& length)
 
 }
 
-void HelixCoordExtract(float**& helixPoints, vector<string>& dataFile, string helixChainID, int initSeqNum, int endSeqNum)
+void HelixCoordExtract(vector< vector<float> >& helixPoints, vector<string>& dataFile, string helixChainID, int initSeqNum, int endSeqNum)
 {
     int j = 0;
     int resSeq;
@@ -251,82 +258,119 @@ void HelixCoordExtract(float**& helixPoints, vector<string>& dataFile, string he
     }
 }
 
-void HelixStartPoint(float** helixPoints, float*& helixStartPoint)
+void HelixStartPoint(vector< vector<float> >& helixPoints, vector<float>& helixStartPoint)
 {
     for (int i = 0; i < 3; i++)
     {
-        helixStartPoint[i] = CoordAvg(helixPoints, 0, i);
+        helixStartPoint.push_back(CoordAvg(helixPoints, 0, i));
     }
 }
 
-void HelixEndPoint(float** helixPoints, float*& helixEndPoint, int length)
+void HelixEndPoint(vector< vector<float> >& helixPoints, vector<float>& helixEndPoint, int length)
 {
     for (int i = 0; i < 3; i++)
     {
-        helixEndPoint[i] = CoordAvg(helixPoints, length - 4, i);
+        helixEndPoint.push_back(CoordAvg(helixPoints, length - 4, i));
     }
 }
 
-void InitalizeOrigen(float*& origen)
+void MoveDistance(vector<float>& moveDistance, vector<float>& point1, vector<float>& point2)
 {
     for (int i = 0; i < 3; i++)
     {
-        origen[i] = 0;
+        moveDistance.push_back(point1[i] - point2[i]);
     }
 }
 
-void MoveDistance(float*& moveDistance, float* point1, float* point2)
+
+// MAtrix Functions
+float** TranslationMatrix(float* move)
 {
-    for (int i = 0; i < 3; i++)
+    float** matrix = new float*[N];
+    for (int i = 0; i < N; i++)
     {
-        moveDistance[i] = point1[i] - point2[i];
+        matrix[i] = new float[N];
     }
+    matrix[0][0] = 1; matrix[0][1] = 0; matrix[0][2] = 0; matrix[0][3] = move[0];
+    matrix[1][0] = 0; matrix[1][1] = 1; matrix[1][2] = 0; matrix[1][3] = move[1];
+    matrix[2][0] = 0; matrix[2][1] = 0; matrix[2][2] = 1; matrix[2][3] = move[2];
+    matrix[3][0] = 0; matrix[3][0] = 0; matrix[3][0] = 0; matrix[3][0] = 1;
+    return matrix;
 }
 
-void TranslationMatrix(float matrix[N][N], float* move)
+float** XRotateMatrix(float thetaX)
 {
-    matrix = { {1,0,0,move[0]},{0,1,0,move[1]},{0,0,1,move[2]},{0,0,0,1} };
+    float** matrix = new float* [N];
+    for (int i = 0; i < N; i++)
+    {
+        matrix[i] = new float[N];
+    }
+    matrix[0][0] = cos(thetaX); matrix[0][1] = -sin(thetaX); matrix[0][2] = 0; matrix[0][3] = 0;
+    matrix[1][0] = sin(thetaX); matrix[1][1] = cos(thetaX); matrix[1][2] = 0; matrix[1][3] = 0;
+    matrix[2][0] = 0; matrix[2][1] = 0; matrix[2][2] = 1; matrix[2][3] = 0;
+    matrix[3][0] = 0; matrix[3][0] = 0; matrix[3][0] = 0; matrix[3][0] = 1;
+    return matrix;
 }
 
-void XRotateMatrix(float**& RxMatrix, float thetaX)
+float** YRotateMatrix(float thetaY)
 {
-    RxMatrix = { {cos(thetaX),-sin(thetaX),0,0},{sin(thetaX),cos(thetaX),0,0} {0,0,1,0},{0,0,0,1} };
-}
-
-void YRotateMatrix(float**& RyMatrix, float thetaY)
-{
+    float** matrix = new float* [N];
+    for (int i = 0; i < N; i++)
+    {
+        matrix[i] = new float[N];
+    }
     RyMatrix = { {cos(thetaY),0,sin(thetaY),0},{0,1,0,0},{-sin(thetaY),0,cos(thetaY),0},{0,0,0,1} };
 }
 
-void ZRotateMatrix(float**& RzMatrix, float thetaZ)
+float** ZRotateMatrix(float thetaZ)
 {
-    RzMatrix = { {1,0,0,0},{0,cos(thetaZ),-sin(thetaZ),0},{0,sin(thetaZ),cos(thetaZ),0} {0,0,0,1} };
-}
-
-void TransformationMatrix(float** TfMatrix, float** RxMatrix, float** RyMatrix, float** RzMatrix, float** ToMatrix, float**& TransMatrix)
-{
-    float** tempMatrix;
-    Multiply(TfMatrix, RxMatrix, tempMatrix);
-    Multiply(tempMatrix, RyMatrix, TransMatrix);
-    Multiply(TransMatrix, RzMatrix, tempMatrix);
-    Multiply(tempMatrix, ToMatrix, TransMatrix);
-}
-
-void Multiply(float** mat1, float** mat2, float**& res)
-{
-    int i, j, k;
-    for (i = 0; i < mat1.size(); i++)
+    float** matrix = new float* [N];
+    for (int i = 0; i < N; i++)
     {
-        for (j = 0; j < mat2[i].size(); j++)
+        matrix[i] = new float[N];
+    }
+    RzMatrix = { {1,0,0,0},{0,cos(thetaZ),-sin(thetaZ),0},{0,sin(thetaZ),cos(thetaZ),0}, {0,0,0,1} };
+}
+
+float** TransformationMatrix(float TfMatrix[][N], float RxMatrix[][N], float RyMatrix[][N], float RzMatrix[][N], float ToMatrix[][N], float TransMatrix[][N])
+{
+    float** tempMatrix1 = new float* [N];
+    for (int i = 0; i < N; i++)
+    {
+        matrix[i] = new float[N];
+    }
+    float** tempMatrix2 = new float* [N];
+    for (int i = 0; i < N; i++)
+    {
+        matrix[i] = new float[N];
+    }
+    tempMatrix1 = MultiplyNxN(TfMatrix, RxMatrix);
+    tempMatrix2 = MultiplyNxN(tempMatrix1, RyMatrix);
+    tempMatrix1 = MultiplyNxN(tempMatrix2, RzMatrix);
+    tempMatrix2 = MultiplyNxN(tempMatrix1, ToMatrix);
+    return tempMatrix2;
+}
+
+float** MultiplyNxN(float** mat1, float** mat2)
+{
+    float** matrix = new float* [N];
+    for (int i = 0; i < N; i++)
+    {
+        matrix[i] = new float[N];
+    }
+    int i, j, k;
+    for (i = 0; i < N; i++)
+    {
+        for (j = 0; j < N; j++)
         {
-            res[i][j] = 0;
-            for (k = 0; k < mat1[i].size(); k++)
-                res[i][j] += mat1[i][k] * mat2[k][j];
+            matrix[i][j] = 0;
+            for (k = 0; k < N; k++)
+                matrix[i][j] += mat1[i][k] * mat2[k][j];
         }
     }
 }
 
-void Translation(vector<string>& inputFile, vector<string>& outputFile, float* moveToOrigen, float thetaX, float thetaY, float thetaZ, float* moveToFinal)
+void Translation(vector<string>& inputFile, vector<string>& outputFile, vector<string>& moveToOrigen, float thetaX, float thetaY, float thetaZ, float* moveToFinal)
 {
     string record;
     float x, y, z;
@@ -445,7 +489,7 @@ float ZCoord(string record)
     return stof(record.substr(46, 8));
 }
 
-float CoordAvg(float** helixPoints, int first, int pos)
+float CoordAvg(vector< vector<float> >& helixPoints, int first, int pos)
 {
     float coordAvg = 0;
     for (int i = first; i < first + 4; i++)
@@ -455,7 +499,7 @@ float CoordAvg(float** helixPoints, int first, int pos)
     return coordAvg / 4;
 }
 
-float Theta(float* helixStartPoint, float* helixEndPoint, int opp, int adj)
+float Theta(vector<float>& helixStartPoint, vector<float>& helixEndPoint, int opp, int adj)
 {
     return atan((helixEndPoint[opp] - helixStartPoint[opp]) / (helixEndPoint[adj] - helixStartPoint[adj]));
 }

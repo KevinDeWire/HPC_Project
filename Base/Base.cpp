@@ -342,6 +342,7 @@ void TransformationMatrix(vector< vector<float> >& TfMatrix, vector< vector<floa
     MultiplyNxN(tempMatrix2, RzMatrix, tempMatrix1);
     MultiplyNxN(tempMatrix1, ToMatrix, tempMatrix2);
     TransMatrix = tempMatrix2;
+
 }
 
 void MultiplyNxN(vector< vector<float> >& mat1, vector< vector<float> >& mat2, vector< vector<float> >& res)
@@ -366,14 +367,15 @@ void Transformation(vector<string>& inputFile, vector< vector<float> > TransMatr
     vector<float> result;
     result.resize(4);
     ostringstream xstr, ystr, zstr;
-    xstr.width(8);
-    ystr.width(8);
-    zstr.width(8);
     int i, j;
 
     for (int f = 0; f < inputFile.size(); f++)
     {
         record = inputFile[f];
+
+        xstr.width(8);
+        ystr.width(8);
+        zstr.width(8);
 
         if (RecordType(record) == "ATOM  ")
         {

@@ -11,6 +11,9 @@
 
 using namespace std;
 
+#define N 4
+#define M 1
+
 void LoadData(vector<string>& dataFile, string file);
 void PrintData(vector<string>& dataFile);
 void SaveData(vector<string>& dataFile, string file);
@@ -22,10 +25,14 @@ void HelixStartPoint(vector< vector<float> >& helixPoints, vector<float>& helixS
 void HelixEndPoint(vector< vector<float> >& helixPoints, vector<float>& helixEndPoint, int length);
 void MoveDistance(vector<float>& moveDistance, vector<float>& point1, vector<float>& point2);
 
-// Linear
-void Translation(vector<string>& inputFile, vector<string>& outputFile, vector<float>& moveToOrigen, float thetaX, float thetaY, float thetaZ, vector<float>& moveToFinal);
-void Move(vector<float>& moveDist, float& x, float& y, float& z);
-void Rotate(float theta, float& coord1, float& coord2);
+// Matrix
+void TranslationMatrix(vector< vector<float> >& matrix, vector<float>& move);
+void XRotateMatrix(vector< vector<float> >& RxMatrix, float thetaX);
+void YRotateMatrix(vector< vector<float> >& RyMatrix, float thetaY);
+void ZRotateMatrix(vector< vector<float> >& RzMatrix, float thetaZ);
+void TransformationMatrix(vector< vector<float> >& TfMatrix, vector< vector<float> >& RxMatrix, vector< vector<float> >& RyMatrix, vector< vector<float> >& RzMatrix, vector< vector<float> >& ToMatrix, vector< vector<float> >& TransMatrix);
+void MultiplyNxN(vector< vector<float> >& mat1, vector< vector<float> >& mat2, vector< vector<float> >& res);
+void Transformation(vector<string>& inputFile, vector< vector<float> > TransMatrix, vector<string>& outputFile);
 
 // Useful
 string RecordType(string record);
@@ -70,6 +77,13 @@ int main()
 
     float thetaX, thetaY, thetaZ;
 
+    vector< vector<float> > ToMatrix; // Translation to Origen
+    vector< vector<float> > RzMatrix; // Z rotation
+    vector< vector<float> > RyMatrix; // Y rotation
+    vector< vector<float> > RxMatrix; // X rotation
+    vector< vector<float> > TfMatrix; // Translation to final position
+    vector< vector<float> > TransMatrix; // Transformation matrix
+
     // Program starts here
 
     cout << "Enter first file name.\n";
@@ -102,11 +116,27 @@ int main()
     MoveDistance(moveToOrigen, origenPoint, helixStartPoint2);
     MoveDistance(moveToFinal, helixStartPoint1, origenPoint);
 
+    TranslationMatrix(TfMatrix, moveToFinal);
+    TranslationMatrix(ToMatrix, moveToOrigen);
+    XRotateMatrix(RxMatrix, thetaX);
+    YRotateMatrix(RyMatrix, thetaY);
+    ZRotateMatrix(RzMatrix, thetaZ);
+    TransformationMatrix(TfMatrix, RxMatrix, RyMatrix, RzMatrix, ToMatrix, TransMatrix);
+
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            cout << TransMatrix[i][j] << "  ";
+        }
+        cout << endl;
+    }
+
     auto end1 = chrono::high_resolution_clock::now();
 
     auto start2 = chrono::high_resolution_clock::now();
 
-    Translation(dataFile2, outputFile, moveToOrigen, thetaX, thetaY, thetaZ, moveToFinal);
+    Transformation(dataFile2, TransMatrix, outputFile);
 
     auto end2 = chrono::high_resolution_clock::now();
 
@@ -250,36 +280,120 @@ void MoveDistance(vector<float>& moveDistance, vector<float>& point1, vector<flo
     }
 }
 
-void Translation(vector<string>& inputFile, vector<string>& outputFile, vector<float>& moveToOrigen, float thetaX, float thetaY, float thetaZ, vector<float>& moveToFinal)
+// Matrix Functions
+void TranslationMatrix(vector< vector<float> >& matrix, vector<float>& move)
+{
+    matrix.resize(N);
+
+    matrix[0].push_back(1); matrix[0].push_back(0); matrix[0].push_back(0); matrix[0].push_back(move[0]);
+    matrix[1].push_back(0); matrix[1].push_back(1); matrix[1].push_back(0); matrix[1].push_back(move[1]);
+    matrix[2].push_back(0); matrix[2].push_back(0); matrix[2].push_back(1); matrix[2].push_back(move[2]);
+    matrix[3].push_back(0); matrix[3].push_back(0); matrix[3].push_back(0); matrix[3].push_back(1);
+}
+
+void XRotateMatrix(vector< vector<float> >& matrix, float thetaX)
+{
+    matrix.resize(N);
+    
+    matrix[0].push_back(1); matrix[0].push_back(0); matrix[0].push_back(0); matrix[0].push_back(0);
+    matrix[1].push_back(0); matrix[1].push_back(cos(thetaX)); matrix[1].push_back(-sin(thetaX)); matrix[1].push_back(0);
+    matrix[2].push_back(0); matrix[2].push_back(sin(thetaX)); matrix[2].push_back(cos(thetaX)); matrix[2].push_back(0);
+    matrix[3].push_back(0); matrix[3].push_back(0); matrix[3].push_back(0); matrix[3].push_back(1);
+}
+
+void YRotateMatrix(vector< vector<float> >& matrix, float thetaY)
+{
+    matrix.resize(N);
+
+    matrix[0].push_back(cos(thetaY)); matrix[0].push_back(0); matrix[0].push_back(sin(thetaY)); matrix[0].push_back(0);
+    matrix[1].push_back(0); matrix[1].push_back(1); matrix[1].push_back(0); matrix[1].push_back(0);
+    matrix[2].push_back(-sin(thetaY)); matrix[2].push_back(0); matrix[2].push_back(cos(thetaY)); matrix[2].push_back(0);
+    matrix[3].push_back(0); matrix[3].push_back(0); matrix[3].push_back(0); matrix[3].push_back(1);
+}
+
+void ZRotateMatrix(vector< vector<float> >& matrix, float thetaZ)
+{
+    matrix.resize(N);
+
+    matrix[0].push_back(cos(thetaZ)); matrix[0].push_back(-sin(thetaZ)); matrix[0].push_back(0); matrix[0].push_back(0);
+    matrix[1].push_back(sin(thetaZ)); matrix[1].push_back(cos(thetaZ)); matrix[1].push_back(0); matrix[1].push_back(0);
+    matrix[2].push_back(0); matrix[2].push_back(0); matrix[2].push_back(1); matrix[2].push_back(0);
+    matrix[3].push_back(0); matrix[3].push_back(0); matrix[3].push_back(0); matrix[3].push_back(1);
+}
+
+void TransformationMatrix(vector< vector<float> >& TfMatrix, vector< vector<float> >& RxMatrix, vector< vector<float> >& RyMatrix, vector< vector<float> >& RzMatrix, vector< vector<float> >& ToMatrix, vector< vector<float> >& TransMatrix)
+{
+    vector< vector<float> >tempMatrix1;
+    tempMatrix1.resize(N);
+    for (int i = 0; i < N; i++)
+    {
+        tempMatrix1[i].resize(N);
+    }
+    
+    vector< vector<float> >tempMatrix2;
+    tempMatrix2.resize(N);
+    for (int i = 0; i < N; i++)
+    {
+        tempMatrix2[i].resize(N);
+    }
+    
+    MultiplyNxN(TfMatrix, RxMatrix, tempMatrix1);
+    MultiplyNxN(tempMatrix1, RyMatrix, tempMatrix2);
+    MultiplyNxN(tempMatrix2, RzMatrix, tempMatrix1);
+    MultiplyNxN(tempMatrix1, ToMatrix, tempMatrix2);
+    TransMatrix = tempMatrix2;
+}
+
+void MultiplyNxN(vector< vector<float> >& mat1, vector< vector<float> >& mat2, vector< vector<float> >& res)
+{
+    int i, j, k;
+    for (i = 0; i < N; i++)
+    {
+        for (j = 0; j < N; j++)
+        {
+            res[i][j] = 0;
+            for (k = 0; k < N; k++)
+                res[i][j] += mat1[i][k] * mat2[k][j];
+        }
+    }
+}
+
+void Transformation(vector<string>& inputFile, vector< vector<float> > TransMatrix, vector<string>& outputFile)
 {
     string record;
-    float x, y, z;
+    vector<float> coords;
+    coords.resize(4);
+    vector<float> result;
+    result.resize(4);
     ostringstream xstr, ystr, zstr;
+    xstr.width(8);
+    ystr.width(8);
+    zstr.width(8);
+    int i, j;
 
-
-
-    for (int i = 0; i < inputFile.size(); i++)
+    for (int f = 0; f < inputFile.size(); f++)
     {
-        xstr.width(8);
-        ystr.width(8);
-        zstr.width(8);
-        record = inputFile[i];
+        record = inputFile[f];
 
         if (RecordType(record) == "ATOM  ")
         {
-            x = XCoord(record);
-            y = YCoord(record);
-            z = ZCoord(record);
+            coords[0] = XCoord(record);
+            coords[1] = YCoord(record);
+            coords[2] = ZCoord(record);
+            coords[3] = 1;
 
-            Move(moveToOrigen, x, y, z);
-            Rotate(thetaZ, x, y);
-            Rotate(thetaY, x, z);
-            Rotate(thetaX, y, z);
-            Move(moveToFinal, x, y, z);
+            for (i = 0; i < N; i++)
+            {
+                result[i] = 0;
+                for (j = 0; j < N; j++)
+                {
+                    result[i] += TransMatrix[i][j] * coords[j];
+                }
+            }
 
-            xstr << fixed << setprecision(3) << x;
-            ystr << fixed << setprecision(3) << y;
-            zstr << fixed << setprecision(3) << z;
+            xstr << fixed << setprecision(3) << result[0];
+            ystr << fixed << setprecision(3) << result[1];
+            zstr << fixed << setprecision(3) << result[2];
 
             record.replace(30, 8, xstr.str());
             record.replace(38, 8, ystr.str());
@@ -291,22 +405,7 @@ void Translation(vector<string>& inputFile, vector<string>& outputFile, vector<f
         }
         outputFile.push_back(record);
     }
-}
 
-void Move(vector<float>& moveDist, float& x, float& y, float& z)
-{
-    x += moveDist[0];
-    y += moveDist[1];
-    z += moveDist[2];
-}
-
-void Rotate(float theta, float& coord1, float& coord2)
-{
-    float new1, new2;
-    new1 = (coord1 * cos(theta)) - (coord2 * sin(theta));
-    new2 = (coord2 * cos(theta)) + (coord1 * sin(theta));
-    coord1 = new1;
-    coord2 = new2;
 }
 
 string RecordType(string record)

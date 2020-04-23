@@ -305,9 +305,9 @@ void YRotateMatrix(vector< vector<float> >& matrix, float thetaY)
 {
     matrix.resize(N);
 
-    matrix[0].push_back(cos(thetaY)); matrix[0].push_back(0); matrix[0].push_back(sin(thetaY)); matrix[0].push_back(0);
+    matrix[0].push_back(cos(thetaY)); matrix[0].push_back(0); matrix[0].push_back(-sin(thetaY)); matrix[0].push_back(0);
     matrix[1].push_back(0); matrix[1].push_back(1); matrix[1].push_back(0); matrix[1].push_back(0);
-    matrix[2].push_back(-sin(thetaY)); matrix[2].push_back(0); matrix[2].push_back(cos(thetaY)); matrix[2].push_back(0);
+    matrix[2].push_back(sin(thetaY)); matrix[2].push_back(0); matrix[2].push_back(cos(thetaY)); matrix[2].push_back(0);
     matrix[3].push_back(0); matrix[3].push_back(0); matrix[3].push_back(0); matrix[3].push_back(1);
 }
 
